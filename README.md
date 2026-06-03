@@ -22,15 +22,15 @@ and <http://localhost:3000/spec.json> for the live spec.
 
 ## The tRPC concerns, answered
 
-> Backend đang lo lắng oRPC có dính các vấn đề của tRPC không. Kết quả:
+> Backend is concerned about whether oRPC inherits tRPC's issues. Result:
 
 | # | tRPC concern | oRPC result | Where in this POC |
 |---|--------------|-------------|-------------------|
-| 1 | **Mọi method đều là POST → không cache được** | Mỗi procedure khai báo HTTP verb thật. Reads là `GET` và đặt `Cache-Control`. Bất kỳ HTTP cache nào (browser/CDN/proxy) đều honor được. | `GET /api/v1/planets` trả `cache-control: public, max-age=60` — xem `src/middleware.ts` (`cache()`) + `ResponseHeadersPlugin` |
-| 2 | **Mọi call vào 1 endpoint duy nhất → khó load balancing** | Mỗi resource là 1 URL riêng (`/api/v1/planets`, `/api/v1/planets/{id}`, …). LB / WAF / API gateway route & cache theo path/method bình thường. | `src/contract.ts` `.route({ method, path })`; xem danh sách path trong `openapi.json` |
-| 3 | API versioning | Contract-first: v1 và v2 là 2 contract độc lập, evolve riêng. v2 ở POC này đổi shape (bỏ `description`, thêm `climate` enum + `discoveredYear`). | `src/contract.ts` (`v1Contract`, `v2Contract`), mount tại `/api/v1/**` và `/api/v2/**` |
-| 4 | OpenAPI spec | Sinh OpenAPI 3.1.1 trực tiếp từ contract → không bao giờ lệch với server. | `pnpm gen:openapi`, `src/generate-openapi.ts`, `OpenAPIReferencePlugin` |
-| 5 | Client generation tooling | 2 lựa chọn (xem bên dưới). | `src/client.ts` |
+| 1 | **Every method is POST → not cacheable** | Each procedure declares a real HTTP verb. Reads are `GET` and set `Cache-Control`. Any HTTP cache (browser/CDN/proxy) can honor it. | `GET /api/v1/planets` returns `cache-control: public, max-age=60` — see `src/middleware.ts` (`cache()`) + `ResponseHeadersPlugin` |
+| 2 | **Every call goes to one endpoint → hard to load balance** | Each resource has its own URL (`/api/v1/planets`, `/api/v1/planets/{id}`, …). LB / WAF / API gateway routing and caching work normally by path/method. | `src/contract.ts` `.route({ method, path })`; see the path list in `openapi.json` |
+| 3 | API versioning | Contract-first: v1 and v2 are independent contracts that can evolve separately. In this POC, v2 changes the shape (removes `description`, adds `climate` enum + `discoveredYear`). | `src/contract.ts` (`v1Contract`, `v2Contract`), mounted at `/api/v1/**` and `/api/v2/**` |
+| 4 | OpenAPI spec | Generates OpenAPI 3.1.1 directly from the contract → it never drifts from the server. | `pnpm gen:openapi`, `src/generate-openapi.ts`, `OpenAPIReferencePlugin` |
+| 5 | Client generation tooling | 2 options (see below). | `src/client.ts` |
 
 ## Demonstrated features
 
