@@ -1,23 +1,13 @@
-import type {
-  CreateParams,
-  CrudFilters,
-  DeleteOneParams,
-  GetListParams,
-  GetOneParams,
-  UpdateParams,
-} from '@refinedev/core'
+import type { CrudFilters } from '@refinedev/core'
 import {
-  RPC_BASE,
-  assertResource,
-  asDataProvider,
   call,
   contractClient,
+  createOrpcResourceProvider,
   toCursor,
   toId,
   unsupported,
   type ContractInputs,
   type ContractOutputs,
-  type ResourceDataProvider,
 } from './shared'
 
 const RESOURCE = 'planets-v2'
@@ -40,15 +30,14 @@ function climateFilter(filters?: CrudFilters): Climate | undefined {
  *
  * This file maps Refine's "planets-v2" calls onto `contract.v2.planet`.
  */
-const provider = {
-  getApiUrl: () => RPC_BASE,
+export const planetsV2DataProvider = createOrpcResourceProvider<
+  typeof RESOURCE,
+  Planet,
+  CreateInput
+>({
+  resource: RESOURCE,
 
-  getList: async ({
-    resource,
-    pagination,
-    filters,
-  }: GetListParams) => {
-    assertResource(resource, RESOURCE)
+  getList: async ({ pagination, filters }) => {
     const output = await call(() =>
       contractClient.v2.planet.list({
         ...toCursor(pagination),
@@ -58,34 +47,21 @@ const provider = {
     return { data: output.items, total: output.total }
   },
 
-  getOne: async ({ resource, id }: GetOneParams) => {
-    assertResource(resource, RESOURCE)
+  getOne: async ({ id }) => {
     const data = await call(() => contractClient.v2.planet.find({ id: toId(id) }))
     return { data }
   },
 
-  create: async ({
-    resource,
-    variables,
-  }: CreateParams<CreateInput>) => {
-    assertResource(resource, RESOURCE)
+  create: async ({ variables }) => {
     const data = await call(() => contractClient.v2.planet.create(variables))
     return { data }
   },
 
-  update: async ({
-    resource,
-  }: UpdateParams<never>) => {
-    assertResource(resource, RESOURCE)
-    return unsupported(resource, 'update')
+  update: async () => {
+    return unsupported(RESOURCE, 'update')
   },
 
-  deleteOne: async ({
-    resource,
-  }: DeleteOneParams) => {
-    assertResource(resource, RESOURCE)
-    return unsupported(resource, 'delete')
+  deleteOne: async () => {
+    return unsupported(RESOURCE, 'delete')
   },
-} satisfies ResourceDataProvider<Planet, CreateInput>
-
-export const planetsV2DataProvider = asDataProvider(provider)
+})
