@@ -55,3 +55,48 @@ export const ListPlanetV2Schema = z.object({
 })
 
 export type PlanetV2 = z.infer<typeof PlanetV2Schema>
+
+// ---- v3 (stars) -----------------------------------------------------------
+// New resource to deeply test all Refine filter operator types:
+//   text search (contains), enum (eq), boolean (eq), numeric ranges (gte/lte),
+//   multi-field sorting.
+
+export const StarTypeSchema = z.enum(['O', 'B', 'A', 'F', 'G', 'K', 'M'])
+export type StarType = z.infer<typeof StarTypeSchema>
+
+export const StarSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1),
+  type: StarTypeSchema,
+  temperature: z.number().positive(), // Kelvin
+  distanceLy: z.number().nonnegative(), // light-years
+  constellation: z.string(),
+  isVisible: z.boolean(), // naked-eye visible
+})
+export type Star = z.infer<typeof StarSchema>
+
+export const CreateStarSchema = z.object({
+  name: z.string().min(1),
+  type: StarTypeSchema.default('G'),
+  temperature: z.number().positive(),
+  distanceLy: z.number().nonnegative(),
+  constellation: z.string().min(1),
+  isVisible: z.boolean().default(false),
+})
+
+export const ListStarsSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  cursor: z.coerce.number().int().min(0).default(0),
+  // --- filters (each maps to a Refine CrudFilter) ---
+  name: z.string().optional(), // operator: contains
+  type: StarTypeSchema.optional(), // operator: eq
+  constellation: z.string().optional(), // operator: eq
+  isVisible: z.coerce.boolean().optional(), // operator: eq
+  temperatureGte: z.coerce.number().optional(), // operator: gte
+  temperatureLte: z.coerce.number().optional(), // operator: lte
+  distanceLyGte: z.coerce.number().optional(), // operator: gte
+  distanceLyLte: z.coerce.number().optional(), // operator: lte
+  // --- sorting (maps to Refine CrudSorters[0]) ---
+  sortBy: z.enum(['name', 'temperature', 'distanceLy']).default('name'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+})

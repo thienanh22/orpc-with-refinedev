@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 const links = [
   { href: '/planets', label: 'Planets (v1)' },
   { href: '/planets-v2', label: 'Planets (v2)' },
+  { href: '/stars', label: 'Stars (v3)' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

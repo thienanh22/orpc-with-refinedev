@@ -1,4 +1,4 @@
-import { db, type PlanetRow } from './db.ts'
+import { db, starsDb, type PlanetRow, type StarRow } from './db.ts'
 import { os } from './context.ts'
 import { cache, logger, requireAuth } from './middleware.ts'
 
@@ -110,5 +110,86 @@ const v2 = {
   },
 }
 
+// =========================================================================
+// v3 implementation (stars — demonstrates all Refine filter operator types)
+// =========================================================================
+
+const toStar = (r: StarRow) => ({
+  id: r.id,
+  name: r.name,
+  type: r.type,
+  temperature: r.temperature,
+  distanceLy: r.distanceLy,
+  constellation: r.constellation,
+  isVisible: r.isVisible,
+})
+
+const v3 = {
+  star: {
+    list: os.v3.star.list
+      .use(logger)
+      .use(cache(60))
+      .handler(({ input }) => {
+        let rows = starsDb.all()
+
+        // text search (contains, case-insensitive)
+        if (input.name) {
+          const q = input.name.toLowerCase()
+          rows = rows.filter((r) => r.name.toLowerCase().includes(q))
+        }
+        // enum filter
+        if (input.type) rows = rows.filter((r) => r.type === input.type)
+        // string enum filter
+        if (input.constellation) rows = rows.filter((r) => r.constellation === input.constellation)
+        // boolean filter
+        if (input.isVisible !== undefined) rows = rows.filter((r) => r.isVisible === input.isVisible)
+        // numeric range filters
+        if (input.temperatureGte !== undefined) rows = rows.filter((r) => r.temperature >= input.temperatureGte!)
+        if (input.temperatureLte !== undefined) rows = rows.filter((r) => r.temperature <= input.temperatureLte!)
+        if (input.distanceLyGte !== undefined) rows = rows.filter((r) => r.distanceLy >= input.distanceLyGte!)
+        if (input.distanceLyLte !== undefined) rows = rows.filter((r) => r.distanceLy <= input.distanceLyLte!)
+
+        const total = rows.length
+
+        // sorting
+        const { sortBy, sortOrder } = input
+        rows = [...rows].sort((a, b) => {
+          const av = a[sortBy]
+          const bv = b[sortBy]
+          const cmp = av < bv ? -1 : av > bv ? 1 : 0
+          return sortOrder === 'desc' ? -cmp : cmp
+        })
+
+        // pagination
+        const items = rows.slice(input.cursor, input.cursor + input.limit).map(toStar)
+        return { items, total }
+      }),
+
+    find: os.v3.star.find
+      .use(logger)
+      .use(cache(60))
+      .handler(({ input, errors }) => {
+        const row = starsDb.find(input.id)
+        if (!row) throw errors.NOT_FOUND({ data: { id: input.id } })
+        return toStar(row)
+      }),
+
+    create: os.v3.star.create
+      .use(logger)
+      .use(requireAuth)
+      .handler(({ input }) => {
+        const row = starsDb.create({
+          name: input.name,
+          type: input.type,
+          temperature: input.temperature,
+          distanceLy: input.distanceLy,
+          constellation: input.constellation,
+          isVisible: input.isVisible,
+        })
+        return toStar(row)
+      }),
+  },
+}
+
 // The final router implements the whole contract (compile-time enforced).
-export const router = os.router({ v1, v2 })
+export const router = os.router({ v1, v2, v3 })
