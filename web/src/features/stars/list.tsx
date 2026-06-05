@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { buildStarListInput } from "@/orpc/stars-provider";
+import { toListInput } from "@/orpc/data-provider";
 
 const STAR_TYPES = ["O", "B", "A", "F", "G", "K", "M"] as const;
 const CONSTELLATIONS = [
@@ -113,9 +113,9 @@ export function StarList() {
   const sortField = sorters?.[0]?.field ?? "name";
   const sortOrder = sorters?.[0]?.order ?? "asc";
 
-  // Compute what the data provider actually sends to oRPC — same function used
-  // in stars-provider.ts, so this is authoritative, not an approximation.
-  const orpcParams = buildStarListInput(
+  // Compute what the data provider actually sends to oRPC — same function the
+  // generic data provider uses, so this is authoritative, not an approximation.
+  const orpcParams = toListInput(
     { currentPage, pageSize, mode: "server" },
     filters,
     sorters,
